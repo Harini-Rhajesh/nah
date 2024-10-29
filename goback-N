@@ -1,0 +1,87 @@
+#include <stdio.h>
+#include <stdlib.h>  // For rand() function
+#include <time.h>    // For seeding rand()
+#include <unistd.h>  // For sleep() function
+
+#define WINDOW_SIZE 3  // Set the window size for Go-Back-N
+
+void send_packet(int packet) {
+    printf("Sender: Sending packet %d\n", packet);
+    sleep(1);  // Simulate network delay in sending
+}
+
+int receive_ack(int packet) {
+    // Randomly decide if ACK is received or lost
+    int ack_received = rand() % 2;  // 50% chance of ACK loss
+
+    if (ack_received) {
+        printf("Receiver: Acknowledging packet %d\n", packet);
+        sleep(1);  // Simulate network delay in receiving ACK
+    } else {
+        printf("Receiver: ACK for packet %d lost!\n", packet);
+    }
+
+    return ack_received;
+}
+
+void go_back_n_protocol(int packets[], int n) {
+    int base = 0;  // The base of the window
+    int next_packet = 0;  // Next packet to send within the window
+
+    while (base < n) {
+        // Send packets within the window
+        while (next_packet < base + WINDOW_SIZE && next_packet < n) {
+            send_packet(packets[next_packet]);
+            next_packet++;
+        }
+
+        // Simulate ACKs for packets within the window
+        for (int i = base; i < next_packet; i++) {
+            int ack_received = receive_ack(packets[i]);
+
+            if (!ack_received) {
+                printf("Sender: ACK for packet %d not received. Resending from packet %d...\n", packets[i], packets[base]);
+                next_packet = base;  // Go back to the base to resend all packets in the window
+                break;
+            }
+
+            // Slide the window forward as ACKs are received
+            if (i == base) {
+                printf("Sender: ACK received for packet %d. Sliding window forward.\n", packets[base]);
+                base++;
+            }
+        }
+    }
+
+    printf("All packets sent and acknowledged.\n");
+}
+
+int main() {
+    int packet_count;
+
+    // Seed the random number generator
+    srand(time(0));
+
+    // Get the number of packets from the user
+    printf("Enter the number of packets to send: ");
+    scanf("%d", &packet_count);
+
+    // Validate packet count
+    if (packet_count <= 0) {
+        printf("Invalid packet count. Exiting.\n");
+        return 1;
+    }
+
+    int packets[packet_count];
+
+    // Get each packet content from the user
+    printf("Enter the packet contents:\n");
+    for (int i = 0; i < packet_count; i++) {
+        printf("Packet %d: ", i + 1);
+        scanf("%d", &packets[i]);
+    }
+
+    printf("\nStarting Go-Back-N Protocol simulation with window size %d\n", WINDOW_SIZE);
+    go_back_n_protocol(packets, packet_count);
+    return 0;
+}
